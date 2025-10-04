@@ -1,89 +1,829 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Welcome to Firebase Hosting</title>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GNA Healthcare System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+        // Firebase modules for authentication and database
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, setDoc, query, where, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getDocs as getDocsPublic } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Alias for public data access
 
-    <!-- update the version number as needed -->
-    <script defer src="/__/firebase/12.3.0/firebase-app-compat.js"></script>
-    <!-- include only the Firebase features as you need -->
-    <script defer src="/__/firebase/12.3.0/firebase-auth-compat.js"></script>
-    <script defer src="/__/firebase/12.3.0/firebase-database-compat.js"></script>
-    <script defer src="/__/firebase/12.3.0/firebase-firestore-compat.js"></script>
-    <script defer src="/__/firebase/12.3.0/firebase-functions-compat.js"></script>
-    <script defer src="/__/firebase/12.3.0/firebase-messaging-compat.js"></script>
-    <script defer src="/__/firebase/12.3.0/firebase-storage-compat.js"></script>
-    <script defer src="/__/firebase/12.3.0/firebase-analytics-compat.js"></script>
-    <script defer src="/__/firebase/12.3.0/firebase-remote-config-compat.js"></script>
-    <script defer src="/__/firebase/12.3.0/firebase-performance-compat.js"></script>
-    <!-- 
-      initialize the SDK after all desired features are loaded, set useEmulator to false
-      to avoid connecting the SDK to running emulators.
-    -->
-    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+        // Global variables provided by the environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // NOTE: For this code to run live, you must replace 'null' with your actual Firebase config object:
+        // const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", ... };
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
 
-    <style media="screen">
-      body { background: #ECEFF1; color: rgba(0,0,0,0.87); font-family: Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; }
-      #message { background: white; max-width: 360px; margin: 100px auto 16px; padding: 32px 24px; border-radius: 3px; }
-      #message h2 { color: #ffa100; font-weight: bold; font-size: 16px; margin: 0 0 8px; }
-      #message h1 { font-size: 22px; font-weight: 300; color: rgba(0,0,0,0.6); margin: 0 0 16px;}
-      #message p { line-height: 140%; margin: 16px 0 24px; font-size: 14px; }
-      #message a { display: block; text-align: center; background: #039be5; text-transform: uppercase; text-decoration: none; color: white; padding: 16px; border-radius: 4px; }
-      #message, #message a { box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24); }
-      #load { color: rgba(0,0,0,0.4); text-align: center; font-size: 13px; }
-      @media (max-width: 600px) {
-        body, #message { margin-top: 0; background: white; box-shadow: none; }
-        body { border-top: 16px solid #ffa100; }
-      }
-    </style>
-  </head>
-  <body>
-    <div id="message">
-      <h2>Welcome</h2>
-      <h1>Firebase Hosting Setup Complete</h1>
-      <p>You're seeing this because you've successfully setup Firebase Hosting. Now it's time to go build something extraordinary!</p>
-      <a target="_blank" href="https://firebase.google.com/docs/hosting/">Open Hosting Documentation</a>
-    </div>
-    <p id="load">Firebase SDK Loading&hellip;</p>
 
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const loadEl = document.querySelector('#load');
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
-        // // The Firebase SDK is initialized and available here!
-        //
-        // firebase.auth().onAuthStateChanged(user => { });
-        // firebase.database().ref('/path/to/ref').on('value', snapshot => { });
-        // firebase.firestore().doc('/foo/bar').get().then(() => { });
-        // firebase.functions().httpsCallable('yourFunction')().then(() => { });
-        // firebase.messaging().requestPermission().then(() => { });
-        // firebase.storage().ref('/path/to/ref').getDownloadURL().then(() => { });
-        // firebase.analytics(); // call to activate
-        // firebase.analytics().logEvent('tutorial_completed');
-        // firebase.performance(); // call to activate
-        //
-        // // 🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥🔥
+        let db = null;
+        let auth = null;
+        let userId = null;
+        let userRole = null;
 
-        try {
-          let app = firebase.app();
-          let features = [
-            'auth', 
-            'database', 
-            'firestore',
-            'functions',
-            'messaging', 
-            'storage', 
-            'analytics', 
-            'remoteConfig',
-            'performance',
-          ].filter(feature => typeof app[feature] === 'function');
-          loadEl.textContent = `Firebase SDK loaded with ${features.join(', ')}`;
-        } catch (e) {
-          console.error(e);
-          loadEl.textContent = 'Error loading the Firebase SDK, check the console.';
-        }
-      });
+        // Message box UI element
+        const messageBox = document.createElement('div');
+        messageBox.className = 'fixed top-4 right-4 z-[100] p-4 rounded-lg shadow-lg text-white font-bold transition-all duration-300 transform translate-x-full';
+        document.body.appendChild(messageBox);
+
+        const showMessage = (message, type = 'success') => {
+            messageBox.textContent = message;
+            messageBox.style.backgroundColor = type === 'success' ? '#10B981' : '#EF4444';
+            messageBox.classList.remove('translate-x-full');
+            setTimeout(() => {
+                messageBox.classList.add('translate-x-full');
+            }, 3000);
+        };
+
+        // UI elements
+        const authSection = document.getElementById('auth-section');
+        const mainContent = document.getElementById('main-content');
+        const patientDashboard = document.getElementById('patient-dashboard');
+        const nurseDashboard = document.getElementById('nurse-dashboard');
+        const adminDashboard = document.getElementById('admin-dashboard');
+        const loggedOutNav = document.getElementById('logged-out-nav');
+        const loggedInNav = document.getElementById('logged-in-nav');
+        const authForm = document.getElementById('auth-form');
+        const authFormTitle = document.getElementById('auth-form-title');
+        const authButton = document.getElementById('auth-button');
+        const toggleAuthLink = document.getElementById('toggle-auth');
+        const logoutButton = document.getElementById('logout-button');
+        const userEmailDisplay = document.getElementById('user-email-display');
+        const mobileLoggedInNav = document.getElementById('mobile-logged-in-nav');
+        const mobileLoggedOutNav = document.getElementById('mobile-logged-out-nav');
+
+        let isLogin = true;
+
+        const updateUI = (user) => {
+            patientDashboard.classList.add('hidden');
+            nurseDashboard.classList.add('hidden');
+            adminDashboard.classList.add('hidden');
+            authSection.classList.add('hidden');
+            mainContent.classList.add('hidden');
+
+            if (user) {
+                loggedInNav.classList.remove('hidden');
+                loggedOutNav.classList.add('hidden');
+                mobileLoggedInNav.classList.remove('hidden');
+                mobileLoggedOutNav.classList.add('hidden');
+                mainContent.classList.remove('hidden');
+                userEmailDisplay.textContent = user.email;
+
+                if (userRole === 'patient') {
+                    patientDashboard.classList.remove('hidden');
+                    loadPatientData();
+                } else if (userRole === 'nurse') {
+                    nurseDashboard.classList.remove('hidden');
+                    loadNurseData();
+                } else if (userRole === 'admin') {
+                    adminDashboard.classList.remove('hidden');
+                    loadAdminData();
+                }
+            } else {
+                authSection.classList.remove('hidden');
+                loggedOutNav.classList.remove('hidden');
+                loggedInNav.classList.add('hidden');
+                mobileLoggedOutNav.classList.remove('hidden');
+                mobileLoggedInNav.classList.add('hidden');
+                mainContent.classList.add('hidden');
+            }
+        };
+
+        const toggleAuthMode = (e) => {
+            e.preventDefault();
+            isLogin = !isLogin;
+            const roleSelect = document.getElementById('role-select');
+            if (isLogin) {
+                authFormTitle.textContent = "Log In to Your Account";
+                authButton.textContent = "Log In";
+                toggleAuthLink.innerHTML = "Don't have an account? <span class='text-blue-500 font-bold'>Register</span>";
+                roleSelect.classList.add('hidden');
+            } else {
+                authFormTitle.textContent = "Create a New Account";
+                authButton.textContent = "Register";
+                toggleAuthLink.innerHTML = "Already have an account? <span class='text-blue-500 font-bold'>Log In</span>";
+                roleSelect.classList.remove('hidden');
+            }
+        };
+
+        const initFirebase = () => {
+            if (!firebaseConfig) {
+                console.error("Firebase config is missing.");
+                // Fallback to show a message if config is missing
+                document.getElementById('auth-section').innerHTML = '<div class="text-center p-10 bg-white shadow-xl rounded-lg"><h2 class="text-2xl font-bold text-red-600">Configuration Error</h2><p class="text-gray-600 mt-2">Firebase configuration is missing. Please check your deployment settings.</p></div>';
+                authSection.classList.remove('hidden');
+                return;
+            }
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        const userDocRef = doc(db, `/artifacts/${appId}/users/${userId}`);
+                        const userDoc = await getDoc(userDocRef);
+                        if (userDoc.exists()) {
+                            userRole = userDoc.data().role;
+                            updateUI(user);
+                        } else {
+                            showMessage("User data not found. Please register again.", "error");
+                            signOut(auth);
+                        }
+                    } else {
+                        userId = null;
+                        userRole = null;
+                        updateUI(null);
+                    }
+                });
+            } catch (e) {
+                console.error("Error initializing Firebase:", e);
+                showMessage("Firebase initialization failed.", "error");
+            }
+        };
+
+        // --- Patient Functions ---
+        const loadPatientData = () => {
+            const recordsList = document.getElementById('patient-records-list');
+            if (db && userId) {
+                const recordsCollection = collection(db, `/artifacts/${appId}/users/${userId}/care_records`);
+                onSnapshot(recordsCollection, (snapshot) => {
+                    recordsList.innerHTML = '';
+                    if (snapshot.empty) {
+                        recordsList.innerHTML = '<p class="text-gray-500 text-center">No care records found.</p>';
+                    }
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const recordItem = document.createElement('div');
+                        recordItem.className = 'bg-white p-4 rounded-lg shadow-sm mb-2';
+                        recordItem.innerHTML = `
+                            <p class="font-bold text-gray-800">${data.title}</p>
+                            <p class="text-sm text-gray-600">${data.content}</p>
+                            <p class="text-xs text-gray-400 mt-2">Date: ${new Date(data.timestamp.toDate()).toLocaleDateString()}</p>
+                        `;
+                        recordsList.appendChild(recordItem);
+                    });
+                });
+            }
+            
+            const remindersList = document.getElementById('reminders-list');
+            remindersList.innerHTML = `
+                <div class="bg-blue-50 p-4 rounded-lg shadow-sm flex items-center mb-2">
+                    <span class="mr-3 text-blue-500">⏰</span>
+                    <div>
+                        <p class="font-bold text-gray-800">Medication Reminder</p>
+                        <p class="text-sm text-gray-600">Take 1 tablet of Paracetamol at 2 PM.</p>
+                    </div>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg shadow-sm flex items-center mb-2">
+                    <span class="mr-3 text-blue-500">🗓️</span>
+                    <div>
+                        <p class="font-bold text-gray-800">Follow-up Appointment</p>
+                        <p class="text-sm text-gray-600">Clinic visit with Nurse Jane on Oct 25, 2024 at 10 AM.</p>
+                    </div>
+                </div>
+            `;
+        };
+        
+        // --- Nurse Functions ---
+        const loadNurseData = () => {
+            const appointmentsList = document.getElementById('appointments-list');
+            if (db) {
+                const appointmentsCollection = collection(db, `/artifacts/${appId}/public/data/appointment_requests`);
+                onSnapshot(appointmentsCollection, (snapshot) => {
+                    appointmentsList.innerHTML = '';
+                    if (snapshot.empty) {
+                        appointmentsList.innerHTML = '<p class="text-gray-500 text-center">No new appointment requests.</p>';
+                    }
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const appointmentItem = document.createElement('div');
+                        appointmentItem.className = 'bg-white p-4 rounded-lg shadow-sm mb-2';
+                        appointmentItem.innerHTML = `
+                            <p class="font-bold text-gray-800">From Patient ID: <span class="text-gray-500">${data.patientId}</span></p>
+                            <p class="text-sm text-gray-600">Reason: ${data.reason}</p>
+                            <p class="text-xs text-gray-400 mt-2">Requested: ${new Date(data.timestamp.toDate()).toLocaleDateString()}</p>
+                            <div class="mt-2 space-x-2">
+                                <button class="approve-appointment bg-green-500 text-white px-3 py-1 rounded-full text-xs hover:bg-green-600" data-doc-id="${doc.id}">Approve</button>
+                                <button class="reject-appointment bg-red-500 text-white px-3 py-1 rounded-full text-xs hover:bg-red-600" data-doc-id="${doc.id}">Reject</button>
+                            </div>
+                        `;
+                        appointmentsList.appendChild(appointmentItem);
+                    });
+                    document.querySelectorAll('.approve-appointment').forEach(button => {
+                        button.addEventListener('click', async (e) => {
+                            const docId = e.target.getAttribute('data-doc-id');
+                            await setDoc(doc(db, `/artifacts/${appId}/public/data/appointment_requests/${docId}`), { status: 'Approved' }, { merge: true });
+                            showMessage("Appointment approved.", "success");
+                        });
+                    });
+                    document.querySelectorAll('.reject-appointment').forEach(button => {
+                        button.addEventListener('click', async (e) => {
+                            const docId = e.target.getAttribute('data-doc-id');
+                            await setDoc(doc(db, `/artifacts/${appId}/public/data/appointment_requests/${docId}`), { status: 'Rejected' }, { merge: true });
+                            showMessage("Appointment rejected.", "success");
+                        });
+                    });
+                });
+            }
+            const consultationsList = document.getElementById('consultations-list');
+            if (db) {
+                const consultationsCollection = collection(db, `/artifacts/${appId}/public/data/consultations`);
+                onSnapshot(consultationsCollection, (snapshot) => {
+                    consultationsList.innerHTML = '';
+                    if (snapshot.empty) {
+                        consultationsList.innerHTML = '<p class="text-gray-500 text-center">No new consultations.</p>';
+                    }
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const consultationItem = document.createElement('div');
+                        consultationItem.className = 'bg-white p-4 rounded-lg shadow-sm mb-2';
+                        consultationItem.innerHTML = `
+                            <p class="font-bold text-gray-800">From Patient ID: <span class="text-gray-500">${data.patientId}</span></p>
+                            <p class="text-sm text-gray-600">${data.message}</p>
+                            <p class="text-xs text-gray-400 mt-2">Status: ${data.status}</p>
+                            <button class="complete-consultation bg-green-500 text-white px-3 py-1 rounded-full mt-2 text-xs hover:bg-green-600" data-doc-id="${doc.id}">Mark as Done</button>
+                        `;
+                        consultationsList.appendChild(consultationItem);
+                    });
+                    document.querySelectorAll('.complete-consultation').forEach(button => {
+                        button.addEventListener('click', async (e) => {
+                            const docId = e.target.getAttribute('data-doc-id');
+                            await setDoc(doc(db, `/artifacts/${appId}/public/data/consultations/${docId}`), { status: 'Completed' }, { merge: true });
+                            showMessage("Consultation marked as done.", "success");
+                        });
+                    });
+                });
+            }
+        };
+
+        // --- Admin Functions ---
+        const loadAdminData = () => {
+            const allUsersList = document.getElementById('all-users-list');
+            if (db) {
+                const usersCollection = collection(db, `/artifacts/${appId}/users`);
+                onSnapshot(usersCollection, (snapshot) => {
+                    allUsersList.innerHTML = '';
+                    if (snapshot.empty) {
+                        allUsersList.innerHTML = '<p class="text-gray-500 text-center">No users found.</p>';
+                    }
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const userItem = document.createElement('div');
+                        userItem.className = 'bg-white p-4 rounded-lg shadow-sm mb-2';
+                        userItem.innerHTML = `
+                            <p class="font-bold text-gray-800">Email: ${data.email}</p>
+                            <p class="text-sm text-gray-600">Role: <span class="capitalize font-medium">${data.role}</span></p>
+                            <p class="text-xs text-gray-500">UID: ${doc.id}</p>
+                        `;
+                        allUsersList.appendChild(userItem);
+                    });
+                });
+            }
+            
+            const contentList = document.getElementById('health-content-list');
+            if (db) {
+                const contentCollection = collection(db, `/artifacts/${appId}/public/data/health_content`);
+                onSnapshot(contentCollection, (snapshot) => {
+                    contentList.innerHTML = '';
+                    if (snapshot.empty) {
+                        contentList.innerHTML = '<p class="text-gray-500 text-center">No content published yet.</p>';
+                    }
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const contentItem = document.createElement('div');
+                        contentItem.className = 'bg-white p-4 rounded-lg shadow-sm mb-2';
+                        contentItem.innerHTML = `
+                            <p class="font-bold text-gray-800">${data.title}</p>
+                            <p class="text-sm text-gray-600">${data.content}</p>
+                            <p class="text-xs text-gray-400 mt-2">Published: ${new Date(data.timestamp.toDate()).toLocaleDateString()}</p>
+                        `;
+                        contentList.appendChild(contentItem);
+                    });
+                });
+            }
+            // Mock data for dashboard analytics
+            const totalUsersEl = document.getElementById('total-users');
+            const totalRequestsEl = document.getElementById('total-requests');
+            const newConsultationsEl = document.getElementById('new-consultations');
+            
+            // Get total number of users
+            const usersRef = collection(db, `/artifacts/${appId}/users`);
+            const unsubscribeUsers = onSnapshot(usersRef, (snapshot) => {
+                totalUsersEl.textContent = snapshot.size;
+            });
+            
+            // Get total number of appointment requests
+            const requestsRef = collection(db, `/artifacts/${appId}/public/data/appointment_requests`);
+            const unsubscribeRequests = onSnapshot(requestsRef, (snapshot) => {
+                totalRequestsEl.textContent = snapshot.size;
+            });
+            
+            // Get number of pending consultations
+            const consultationsRef = query(collection(db, `/artifacts/${appId}/public/data/consultations`), where('status', '==', 'Pending'));
+            const unsubscribeConsultations = onSnapshot(consultationsRef, (snapshot) => {
+                newConsultationsEl.textContent = snapshot.size;
+            });
+        };
+
+        // Main logic
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetId = e.target.getAttribute('href').substring(1);
+                    const targetElement = document.getElementById(targetId);
+                    if (targetElement) {
+                        targetElement.scrollIntoView({ behavior: 'smooth' });
+                    }
+                });
+            });
+
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const closeMobileMenu = document.getElementById('close-mobile-menu');
+            
+            if (mobileMenuButton && mobileMenu && closeMobileMenu) {
+                mobileMenuButton.addEventListener('click', () => mobileMenu.classList.remove('hidden'));
+                closeMobileMenu.addEventListener('click', () => mobileMenu.classList.add('hidden'));
+                document.querySelectorAll('#mobile-logged-out-nav a, #mobile-logged-in-nav a').forEach(link => {
+                    link.addEventListener('click', () => mobileMenu.classList.add('hidden'));
+                });
+            }
+            
+            const mobileLogoutButton = document.getElementById('mobile-logout-button');
+            if (mobileLogoutButton) {
+                mobileLogoutButton.addEventListener('click', async () => {
+                    try {
+                        await signOut(auth);
+                        showMessage("Logged out successfully!", "success");
+                        mobileMenu.classList.add('hidden');
+                    } catch (error) {
+                        console.error("Logout failed:", error);
+                        showMessage("Logout failed. Please try again.", "error");
+                    }
+                });
+            }
+
+            if (authForm) {
+                authForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById('email').value;
+                    const password = document.getElementById('password').value;
+                    const role = document.getElementById('role-select').value;
+
+                    if (isLogin) {
+                        try {
+                            await signInWithEmailAndPassword(auth, email, password);
+                            showMessage("Successfully logged in!", "success");
+                        } catch (error) {
+                            console.error("Login failed:", error);
+                            showMessage("Login failed. Check your email and password.", "error");
+                        }
+                    } else {
+                        try {
+                            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                            const user = userCredential.user;
+                            await setDoc(doc(db, `/artifacts/${appId}/users/${user.uid}`), {
+                                email: email,
+                                role: role,
+                                createdAt: new Date()
+                            });
+                            showMessage("Account created successfully!", "success");
+                        } catch (error) {
+                            console.error("Registration failed:", error);
+                            showMessage("Registration failed. Please try a different email or password.", "error");
+                        }
+                    }
+                });
+            }
+
+            if (logoutButton) {
+                logoutButton.addEventListener('click', async () => {
+                    try {
+                        await signOut(auth);
+                        showMessage("Logged out successfully!", "success");
+                    } catch (error) {
+                        console.error("Logout failed:", error);
+                        showMessage("Logout failed. Please try again.", "error");
+                    }
+                });
+            }
+            
+            const requestNurseForm = document.getElementById('request-nurse-form');
+            if(requestNurseForm) {
+                 requestNurseForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const reason = document.getElementById('nurse-reason').value;
+                    await addDoc(collection(db, `/artifacts/${appId}/public/data/appointment_requests`), {
+                        patientId: userId,
+                        reason: reason,
+                        status: 'Pending',
+                        timestamp: new Date()
+                    });
+                    showMessage("Nurse request submitted.", "success");
+                    e.target.reset();
+                });
+            }
+
+            const consultForm = document.getElementById('consult-form');
+            if(consultForm) {
+                consultForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const message = document.getElementById('consult-message').value;
+                    await addDoc(collection(db, `/artifacts/${appId}/public/data/consultations`), {
+                        patientId: userId,
+                        message: message,
+                        status: 'Pending',
+                        timestamp: new Date()
+                    });
+                    showMessage("Consultation request sent.", "success");
+                    e.target.reset();
+                });
+            }
+            
+            const updateRecordForm = document.getElementById('update-record-form');
+            if(updateRecordForm) {
+                updateRecordForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const patientId = document.getElementById('record-patient-id').value;
+                    const title = document.getElementById('record-title').value;
+                    const content = document.getElementById('record-content').value;
+
+                    if (!patientId || !title || !content) {
+                        showMessage("All fields are required.", "error");
+                        return;
+                    }
+
+                    const userDocRef = doc(db, `/artifacts/${appId}/users/${patientId}`);
+                    const userDoc = await getDoc(userDocRef);
+                    if (!userDoc.exists() || userDoc.data().role !== 'patient') {
+                        showMessage("Invalid patient ID.", "error");
+                        return;
+                    }
+
+                    await addDoc(collection(db, `/artifacts/${appId}/users/${patientId}/care_records`), {
+                        title: title,
+                        content: content,
+                        timestamp: new Date(),
+                        nurseId: userId
+                    });
+                    showMessage("Patient record updated.", "success");
+                    e.target.reset();
+                });
+            }
+
+            const publishContentForm = document.getElementById('publish-content-form');
+            if(publishContentForm) {
+                publishContentForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const title = document.getElementById('content-title').value;
+                    const content = document.getElementById('content-text').value;
+
+                    await addDoc(collection(db, `/artifacts/${appId}/public/data/health_content`), {
+                        title: title,
+                        content: content,
+                        timestamp: new Date()
+                    });
+                    showMessage("Health content published.", "success");
+                    e.target.reset();
+                });
+            }
+
+            if (toggleAuthLink) {
+                toggleAuthLink.addEventListener('click', toggleAuthMode);
+            }
+            
+            initFirebase();
+        });
     </script>
-  </body>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .bg-gradient-primary { background: linear-gradient(to right, #1E40AF, #2563EB, #3B82F6); }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-900 antialiased">
+    <header class="bg-white shadow-lg py-4 fixed top-0 w-full z-50">
+        <nav class="container mx-auto px-4 flex justify-between items-center">
+            <a href="#" class="text-2xl font-bold text-gray-800">GNA Healthcare</a>
+            <div id="logged-out-nav" class="md:flex space-x-6 items-center">
+                <a href="#about" class="text-gray-600 hover:text-blue-600 transition-colors duration-200 nav-link">About Us</a>
+                <a href="#services" class="text-gray-600 hover:text-blue-600 transition-colors duration-200 nav-link">Services</a>
+                <a href="#careers" class="text-gray-600 hover:text-blue-600 transition-colors duration-200 nav-link">Careers</a>
+                <a href="#auth-section" class="text-white bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-full shadow-lg transition-all duration-200 nav-link">Login</a>
+            </div>
+            <div id="logged-in-nav" class="hidden md:flex space-x-6 items-center">
+                <a href="#about" class="text-gray-600 hover:text-blue-600 transition-colors duration-200 nav-link">About Us</a>
+                <a href="#services" class="text-gray-600 hover:text-blue-600 transition-colors duration-200 nav-link">Services</a>
+                <a href="#dashboard" class="text-gray-600 hover:text-blue-600 transition-colors duration-200 nav-link">My Dashboard</a>
+                <a href="#careers" class="text-gray-600 hover:text-blue-600 transition-colors duration-200 nav-link">Careers</a>
+                <span id="user-email-display" class="text-gray-500 text-sm italic"></span>
+                <button id="logout-button" class="text-white bg-red-600 hover:bg-red-700 px-6 py-2 rounded-full shadow-lg transition-all duration-200">Logout</button>
+            </div>
+            <button id="mobile-menu-button" class="md:hidden text-gray-600 hover:text-blue-600 focus:outline-none">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                </svg>
+            </button>
+        </nav>
+    </header>
+    <div id="mobile-menu" class="hidden fixed inset-0 bg-white z-40 p-6 md:hidden">
+        <div class="flex justify-end">
+            <button id="close-mobile-menu" class="text-gray-600 hover:text-blue-600 focus:outline-none">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <div class="mt-8 flex flex-col space-y-4 text-center" id="mobile-nav-links">
+            <div id="mobile-logged-out-nav">
+                <a href="#about" class="block text-gray-800 hover:text-blue-600 text-lg nav-link py-2">About Us</a>
+                <a href="#services" class="block text-gray-800 hover:text-blue-600 text-lg nav-link py-2">Services</a>
+                <a href="#careers" class="block text-gray-800 hover:text-blue-600 text-lg nav-link py-2">Careers</a>
+                <a href="#auth-section" class="block text-gray-800 hover:text-blue-600 text-lg nav-link py-2">Login</a>
+            </div>
+            <div id="mobile-logged-in-nav" class="hidden">
+                <a href="#about" class="block text-gray-800 hover:text-blue-600 text-lg nav-link py-2">About Us</a>
+                <a href="#services" class="block text-gray-800 hover:text-blue-600 text-lg nav-link py-2">Services</a>
+                <a href="#dashboard" class="block text-gray-800 hover:text-blue-600 text-lg nav-link py-2">My Dashboard</a>
+                <a href="#careers" class="block text-gray-800 hover:text-blue-600 text-lg nav-link py-2">Careers</a>
+                <button id="mobile-logout-button" class="text-red-600 hover:text-red-700 text-lg font-bold mt-4">Logout</button>
+            </div>
+        </div>
+    </div>
+    <main class="pt-20">
+        <section id="hero" class="min-h-screen flex items-center justify-center text-center bg-gradient-primary">
+            <div class="p-8 md:p-12 lg:p-16 max-w-4xl mx-auto">
+                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight mb-4 drop-shadow-lg">
+                    Compassionate care, personalized for your home.
+                </h1>
+                <p class="text-lg sm:text-xl text-white mb-8 drop-shadow-md">
+                    GNA Healthcare is a leading Ghanaian initiative providing flexible, non-emergency home and community-based care with unparalleled professionalism.
+                </p>
+                <a href="#services" class="nav-link inline-block bg-white text-blue-600 font-bold py-3 px-8 rounded-full shadow-xl hover:scale-105 transition-transform duration-300">
+                    Explore Our Professional Services
+                </a>
+            </div>
+        </section>
+
+        <section id="auth-section" class="py-16 md:py-24 bg-gray-50 flex items-center justify-center">
+            <div class="container mx-auto px-4 max-w-lg">
+                <div class="bg-white p-8 rounded-xl shadow-lg">
+                    <form id="auth-form" class="space-y-6">
+                        <h2 id="auth-form-title" class="text-3xl font-bold text-center text-gray-800">Log In to Your Account</h2>
+                        
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
+                            <input type="email" id="email" name="email" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                            <input type="password" id="password" name="password" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        
+                        <div id="role-select" class="hidden">
+                            <label for="role" class="block text-sm font-medium text-gray-700">Register As</label>
+                            <select id="role" name="role" required class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="patient">Patient</option>
+                                <option value="nurse">Nurse</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        
+                        <button id="auth-button" type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+                            Log In
+                        </button>
+                        
+                        <div class="text-center text-sm">
+                            <a href="#" id="toggle-auth" class="font-medium text-gray-600 hover:text-blue-500">
+                                Don't have an account? <span class="text-blue-500 font-bold">Register</span>
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <section id="dashboard" class="py-16 md:py-24 bg-white hidden">
+            <div class="container mx-auto px-4">
+                <h2 class="text-4xl font-extrabold text-gray-800 mb-8 text-center">My Dashboard</h2>
+                
+                <div id="patient-dashboard" class="hidden grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="md:col-span-2">
+                        <h3 class="text-2xl font-bold text-gray-700 mb-4 border-b pb-2">My Care Records</h3>
+                        <div id="patient-records-list" class="space-y-4 bg-gray-50 p-4 rounded-lg shadow-inner min-h-[150px]">
+                            <p class="text-gray-500 text-center">Loading records...</p>
+                        </div>
+                        
+                        <h3 class="text-2xl font-bold text-gray-700 mb-4 mt-8 border-b pb-2">Upcoming Reminders</h3>
+                        <div id="reminders-list" class="space-y-4">
+                            </div>
+                    </div>
+                    
+                    <div class="space-y-8">
+                        <div class="bg-blue-50 p-6 rounded-xl shadow-md">
+                            <h4 class="text-xl font-bold text-blue-800 mb-4">Request a Nurse Visit</h4>
+                            <form id="request-nurse-form" class="space-y-4">
+                                <textarea id="nurse-reason" required rows="3" class="w-full p-2 border border-blue-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="Briefly explain the reason for the visit (e.g., wound check, medication administration, follow-up)."></textarea>
+                                <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors">Submit Request</button>
+                            </form>
+                        </div>
+                        
+                        <div class="bg-green-50 p-6 rounded-xl shadow-md">
+                            <h4 class="text-xl font-bold text-green-800 mb-4">Quick Consultation</h4>
+                            <form id="consult-form" class="space-y-4">
+                                <textarea id="consult-message" required rows="3" class="w-full p-2 border border-green-300 rounded-md focus:ring-green-500 focus:border-green-500" placeholder="Ask your non-urgent health question."></textarea>
+                                <button type="submit" class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors">Send Message</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="nurse-dashboard" class="hidden grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="text-2xl font-bold text-gray-700 mb-4 border-b pb-2">New Appointment Requests</h3>
+                        <div id="appointments-list" class="space-y-4 bg-gray-50 p-4 rounded-lg shadow-inner min-h-[150px]">
+                            <p class="text-gray-500 text-center">Loading requests...</p>
+                        </div>
+                        
+                        <h3 class="text-2xl font-bold text-gray-700 mb-4 mt-8 border-b pb-2">Pending Consultations</h3>
+                        <div id="consultations-list" class="space-y-4 bg-gray-50 p-4 rounded-lg shadow-inner min-h-[150px]">
+                            <p class="text-gray-500 text-center">Loading consultations...</p>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="bg-yellow-50 p-6 rounded-xl shadow-md">
+                            <h4 class="text-xl font-bold text-yellow-800 mb-4">Update Patient Care Record</h4>
+                            <form id="update-record-form" class="space-y-4">
+                                <div>
+                                    <label for="record-patient-id" class="block text-sm font-medium text-gray-700">Patient UID</label>
+                                    <input type="text" id="record-patient-id" required class="w-full p-2 border border-yellow-300 rounded-md focus:ring-yellow-500 focus:border-yellow-500" placeholder="Enter patient Firebase UID">
+                                </div>
+                                <div>
+                                    <label for="record-title" class="block text-sm font-medium text-gray-700">Record Title (e.g., Blood Pressure Check)</label>
+                                    <input type="text" id="record-title" required class="w-full p-2 border border-yellow-300 rounded-md focus:ring-yellow-500 focus:border-yellow-500" placeholder="Title">
+                                </div>
+                                <div>
+                                    <label for="record-content" class="block text-sm font-medium text-gray-700">Record Details</label>
+                                    <textarea id="record-content" required rows="4" class="w-full p-2 border border-yellow-300 rounded-md focus:ring-yellow-500 focus:border-yellow-500" placeholder="Detailed notes on patient status and care provided."></textarea>
+                                </div>
+                                <button type="submit" class="w-full bg-yellow-600 text-white py-2 rounded-lg hover:bg-yellow-700 transition-colors">Save Record</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="admin-dashboard" class="hidden grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="md:col-span-1 space-y-4">
+                        <h3 class="text-2xl font-bold text-gray-700 mb-4 border-b pb-2">System Analytics</h3>
+                        <div class="bg-white p-5 rounded-lg shadow-md">
+                            <p class="text-sm font-medium text-gray-500">Total Registered Users</p>
+                            <p id="total-users" class="text-3xl font-extrabold text-blue-600">0</p>
+                        </div>
+                        <div class="bg-white p-5 rounded-lg shadow-md">
+                            <p class="text-sm font-medium text-gray-500">Total Appointment Requests</p>
+                            <p id="total-requests" class="text-3xl font-extrabold text-green-600">0</p>
+                        </div>
+                        <div class="bg-white p-5 rounded-lg shadow-md">
+                            <p class="text-sm font-medium text-gray-500">New Consultations (Pending)</p>
+                            <p id="new-consultations" class="text-3xl font-extrabold text-red-600">0</p>
+                        </div>
+
+                        <div class="bg-purple-50 p-6 rounded-xl shadow-md mt-8">
+                            <h4 class="text-xl font-bold text-purple-800 mb-4">Publish Health Content</h4>
+                            <form id="publish-content-form" class="space-y-4">
+                                <div>
+                                    <label for="content-title" class="block text-sm font-medium text-gray-700">Title</label>
+                                    <input type="text" id="content-title" required class="w-full p-2 border border-purple-300 rounded-md focus:ring-purple-500 focus:border-purple-500" placeholder="Title of article/advice">
+                                </div>
+                                <div>
+                                    <label for="content-text" class="block text-sm font-medium text-gray-700">Content</label>
+                                    <textarea id="content-text" required rows="4" class="w-full p-2 border border-purple-300 rounded-md focus:ring-purple-500 focus:border-purple-500" placeholder="Full article/advice content."></textarea>
+                                </div>
+                                <button type="submit" class="w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition-colors">Publish Content</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <h3 class="text-2xl font-bold text-gray-700 mb-4 border-b pb-2">All Registered Users</h3>
+                        <div id="all-users-list" class="space-y-4 bg-gray-50 p-4 rounded-lg shadow-inner min-h-[300px]">
+                            <p class="text-gray-500 text-center">Loading users...</p>
+                        </div>
+                        
+                        <h3 class="text-2xl font-bold text-gray-700 mb-4 mt-8 border-b pb-2">Published Health Content</h3>
+                        <div id="health-content-list" class="space-y-4 bg-gray-50 p-4 rounded-lg shadow-inner min-h-[150px]">
+                            <p class="text-gray-500 text-center">Loading content...</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+        
+        <section id="about" class="py-16 md:py-24 bg-white">
+            <div class="container mx-auto px-4 max-w-4xl text-center">
+                <h2 class="text-4xl font-extrabold text-gray-800 mb-6">Our Mission</h2>
+                <p class="text-xl text-gray-600 mb-8">
+                    GNA Healthcare's mission is to bridge the gap between hospital care and home-based recovery by providing a professional, technology-enabled, and compassionate nursing service right to your doorstep. We are committed to fostering wellness and independence in the community.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
+                    <div class="p-6 bg-gray-50 rounded-lg shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-600 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Compassion</h3>
+                        <p class="text-gray-600 text-sm">Treating every client with dignity, empathy, and respect.</p>
+                    </div>
+                    <div class="p-6 bg-gray-50 rounded-lg shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-600 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-9.618 3.364z" /></svg>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Professionalism</h3>
+                        <p class="text-gray-600 text-sm">Delivering the highest standard of non-emergency care.</p>
+                    </div>
+                    <div class="p-6 bg-gray-50 rounded-lg shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-blue-600 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Accessibility</h3>
+                        <p class="text-gray-600 text-sm">Making quality healthcare available in home and community settings.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="services" class="py-16 md:py-24 bg-gray-100">
+            <div class="container mx-auto px-4">
+                <h2 class="text-4xl font-extrabold text-gray-800 mb-12 text-center">Our Professional Services</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
+                        <h3 class="text-2xl font-bold text-blue-600 mb-3">Post-Operative Care</h3>
+                        <p class="text-gray-600 mb-4">Skilled nursing services to manage wounds, medication, and recovery after hospital discharge, ensuring a smooth transition home.</p>
+                        <ul class="list-disc list-inside text-sm text-gray-500 space-y-1">
+                            <li>Wound dressing and monitoring</li>
+                            <li>Pain management support</li>
+                            <li>Patient and family education</li>
+                        </ul>
+                    </div>
+                    <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
+                        <h3 class="text-2xl font-bold text-blue-600 mb-3">Chronic Disease Management</h3>
+                        <p class="text-gray-600 mb-4">Assistance for patients managing long-term conditions like diabetes, hypertension, and asthma, with routine monitoring and education.</p>
+                        <ul class="list-disc list-inside text-sm text-gray-500 space-y-1">
+                            <li>Vital signs checks (BP, Glucose)</li>
+                            <li>Medication administration/reminders</li>
+                            <li>Diet and lifestyle counseling</li>
+                        </ul>
+                    </div>
+                    <div class="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
+                        <h3 class="text-2xl font-bold text-blue-600 mb-3">General Wellness Checks</h3>
+                        <p class="text-gray-600 mb-4">Regular check-ups and preventative care tailored for the elderly, children, or anyone needing non-emergency, in-home care.</p>
+                        <ul class="list-disc list-inside text-sm text-gray-500 space-y-1">
+                            <li>Immunizations and injections</li>
+                            <li>Health risk assessments</li>
+                            <li>Tele-consultation support</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="careers" class="py-16 md:py-24 bg-white">
+            <div class="container mx-auto px-4 max-w-4xl text-center">
+                <h2 class="text-4xl font-extrabold text-gray-800 mb-6">Join Our Team of Healthcare Professionals</h2>
+                <p class="text-xl text-gray-600 mb-8">
+                    Be a part of a revolutionary team that delivers professional, compassionate home care. We are always looking for dedicated nurses and administrative staff.
+                </p>
+                <div class="space-y-4">
+                    <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg text-left">
+                        <h3 class="text-xl font-bold text-gray-800">Community Home Care Nurse (RN/LPN)</h3>
+                        <p class="text-blue-600 font-medium">Full-Time | Accra, Kumasi, Takoradi</p>
+                        <p class="text-sm text-gray-600 mt-2">Provide in-home clinical care, manage patient records digitally, and coordinate with family members.</p>
+                    </div>
+                    <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg text-left">
+                        <h3 class="text-xl font-bold text-gray-800">Administrative Support Specialist</h3>
+                        <p class="text-blue-600 font-medium">Part-Time | Remote/Head Office</p>
+                        <p class="text-sm text-gray-600 mt-2">Assist the admin team with user management, data entry, and appointment scheduling via the dashboard.</p>
+                    </div>
+                </div>
+                <button class="mt-8 bg-blue-600 text-white font-bold py-3 px-8 rounded-full shadow-xl hover:bg-blue-700 transition-colors duration-300">
+                    Apply Now
+                </button>
+            </div>
+        </section>
+
+    </main>
+    <footer class="bg-gray-800 text-white py-12">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-xl font-bold mb-4">GNA Healthcare System</p>
+            <p class="text-sm text-gray-400">&copy; 2024 GNA Healthcare. All rights reserved.</p>
+            <div class="flex justify-center space-x-6 mt-4 text-gray-400">
+                <a href="#" class="hover:text-blue-500 text-sm">Privacy Policy</a>
+                <a href="#" class="hover:text-blue-500 text-sm">Terms of Service</a>
+                <a href="#auth-section" class="nav-link hover:text-blue-500 text-sm">Login/Register</a>
+            </div>
+        </div>
+    </footer>
+</body>
 </html>
